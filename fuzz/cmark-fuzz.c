@@ -40,6 +40,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         }
         break;
 
+      case 3: 
       case 2: {
         size_t block_max = 20;
         cmark_parser *parser = cmark_parser_new(options);
@@ -55,10 +56,6 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         cmark_parser_free(parser);
         break;
       }
-
-      case 3:
-        free(cmark_markdown_to_html(markdown, markdown_size, options));
-        break;
     }
 
     if (doc != NULL) {

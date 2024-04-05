@@ -13,10 +13,10 @@
 
 static const cmark_node_type node_types[] = {
     CMARK_NODE_DOCUMENT,  CMARK_NODE_BLOCK_QUOTE, CMARK_NODE_LIST,
-    CMARK_NODE_ITEM,      CMARK_NODE_CODE_BLOCK,  CMARK_NODE_HTML_BLOCK,
+    CMARK_NODE_ITEM,      CMARK_NODE_CODE_BLOCK,  
     CMARK_NODE_PARAGRAPH, CMARK_NODE_HEADING,     CMARK_NODE_THEMATIC_BREAK,
     CMARK_NODE_TEXT,      CMARK_NODE_SOFTBREAK,   CMARK_NODE_LINEBREAK,
-    CMARK_NODE_CODE,      CMARK_NODE_HTML_INLINE, CMARK_NODE_EMPH,
+    CMARK_NODE_CODE,      CMARK_NODE_EMPH,
     CMARK_NODE_STRONG,    CMARK_NODE_LINK,        CMARK_NODE_IMAGE};
 static const int num_node_types = sizeof(node_types) / sizeof(*node_types);
 
@@ -45,8 +45,6 @@ static void accessors(test_batch_runner *runner) {
                                  "fenced\n"
                                  "```\n"
                                  "    code\n"
-                                 "\n"
-                                 "<div>html</div>\n"
                                  "\n"
                                  "[link](url 'title')\n";
 
@@ -81,14 +79,10 @@ static void accessors(test_batch_runner *runner) {
   STR_EQ(runner, cmark_node_get_literal(code), "code\n",
          "get_literal indented code");
 
-  cmark_node *html = cmark_node_next(code);
-  STR_EQ(runner, cmark_node_get_literal(html), "<div>html</div>\n",
-         "get_literal html");
-
-  cmark_node *paragraph = cmark_node_next(html);
-  INT_EQ(runner, cmark_node_get_start_line(paragraph), 17, "get_start_line");
+  cmark_node *paragraph = cmark_node_next(code);
+  INT_EQ(runner, cmark_node_get_start_line(paragraph), 15, "get_start_line");
   INT_EQ(runner, cmark_node_get_start_column(paragraph), 1, "get_start_column");
-  INT_EQ(runner, cmark_node_get_end_line(paragraph), 17, "get_end_line");
+  INT_EQ(runner, cmark_node_get_end_line(paragraph), 15, "get_end_line");
 
   cmark_node *link = cmark_node_first_child(paragraph);
   STR_EQ(runner, cmark_node_get_url(link), "url", "get_url");
@@ -120,9 +114,6 @@ static void accessors(test_batch_runner *runner) {
      "set_literal fenced code");
   OK(runner, cmark_node_set_fence_info(fenced, "LANG"), "set_fence_info");
 
-  OK(runner, cmark_node_set_literal(html, "<div>HTML</div>\n"),
-     "set_literal html");
-
   OK(runner, cmark_node_set_url(link, "URL"), "set_url");
   OK(runner, cmark_node_set_title(link, "TITLE"), "set_title");
 
@@ -145,7 +136,6 @@ static void accessors(test_batch_runner *runner) {
   OK(runner, cmark_node_get_literal(ordered_list) == NULL, "get_literal error");
   OK(runner, cmark_node_get_fence_info(paragraph) == NULL,
      "get_fence_info error");
-  OK(runner, cmark_node_get_url(html) == NULL, "get_url error");
   OK(runner, cmark_node_get_title(heading) == NULL, "get_title error");
 
   // Setter errors
@@ -160,7 +150,6 @@ static void accessors(test_batch_runner *runner) {
      "set_literal error");
   OK(runner, !cmark_node_set_fence_info(paragraph, "lang"),
      "set_fence_info error");
-  OK(runner, !cmark_node_set_url(html, "url"), "set_url error");
   OK(runner, !cmark_node_set_title(heading, "title"), "set_title error");
 
   OK(runner, !cmark_node_set_heading_level(heading, 0),
@@ -360,12 +349,12 @@ void hierarchy(test_batch_runner *runner) {
   int list_item_flag = 1 << CMARK_NODE_ITEM;
   int top_level_blocks =
       (1 << CMARK_NODE_BLOCK_QUOTE) | (1 << CMARK_NODE_LIST) |
-      (1 << CMARK_NODE_CODE_BLOCK) | (1 << CMARK_NODE_HTML_BLOCK) |
+      (1 << CMARK_NODE_CODE_BLOCK) |
       (1 << CMARK_NODE_PARAGRAPH) | (1 << CMARK_NODE_HEADING) |
       (1 << CMARK_NODE_THEMATIC_BREAK);
   int all_inlines = (1 << CMARK_NODE_TEXT) | (1 << CMARK_NODE_SOFTBREAK) |
                     (1 << CMARK_NODE_LINEBREAK) | (1 << CMARK_NODE_CODE) |
-                    (1 << CMARK_NODE_HTML_INLINE) | (1 << CMARK_NODE_EMPH) |
+                    (1 << CMARK_NODE_EMPH) |
                     (1 << CMARK_NODE_STRONG) | (1 << CMARK_NODE_LINK) |
                     (1 << CMARK_NODE_IMAGE);
 
@@ -374,7 +363,6 @@ void hierarchy(test_batch_runner *runner) {
   test_content(runner, CMARK_NODE_LIST, list_item_flag);
   test_content(runner, CMARK_NODE_ITEM, top_level_blocks);
   test_content(runner, CMARK_NODE_CODE_BLOCK, 0);
-  test_content(runner, CMARK_NODE_HTML_BLOCK, 0);
   test_content(runner, CMARK_NODE_PARAGRAPH, all_inlines);
   test_content(runner, CMARK_NODE_HEADING, all_inlines);
   test_content(runner, CMARK_NODE_THEMATIC_BREAK, 0);
@@ -382,7 +370,6 @@ void hierarchy(test_batch_runner *runner) {
   test_content(runner, CMARK_NODE_SOFTBREAK, 0);
   test_content(runner, CMARK_NODE_LINEBREAK, 0);
   test_content(runner, CMARK_NODE_CODE, 0);
-  test_content(runner, CMARK_NODE_HTML_INLINE, 0);
   test_content(runner, CMARK_NODE_EMPH, all_inlines);
   test_content(runner, CMARK_NODE_STRONG, all_inlines);
   test_content(runner, CMARK_NODE_LINK, all_inlines);

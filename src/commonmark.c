@@ -294,12 +294,6 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     BLANKLINE();
     break;
 
-  case CMARK_NODE_HTML_BLOCK:
-    BLANKLINE();
-    OUT(cmark_node_get_literal(node), false, LITERAL);
-    BLANKLINE();
-    break;
-
   case CMARK_NODE_CUSTOM_BLOCK:
     BLANKLINE();
     OUT(entering ? cmark_node_get_on_enter(node) : cmark_node_get_on_exit(node),
@@ -370,10 +364,6 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     for (i = 0; i < numticks; i++) {
       LIT("`");
     }
-    break;
-
-  case CMARK_NODE_HTML_INLINE:
-    OUT(cmark_node_get_literal(node), false, LITERAL);
     break;
 
   case CMARK_NODE_CUSTOM_INLINE:

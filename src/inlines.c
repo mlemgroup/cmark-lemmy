@@ -49,11 +49,6 @@ typedef struct bracket {
   bool bracket_after;
 } bracket;
 
-#define FLAG_SKIP_HTML_CDATA        (1u << 0)
-#define FLAG_SKIP_HTML_DECLARATION  (1u << 1)
-#define FLAG_SKIP_HTML_PI           (1u << 2)
-#define FLAG_SKIP_HTML_COMMENT      (1u << 3)
-
 typedef struct {
   cmark_mem *mem;
   cmark_chunk input;
@@ -924,78 +919,6 @@ static cmark_node *handle_pointy_brace(subject *subj, int options) {
     subj->pos += matchlen;
 
     return make_autolink(subj, subj->pos - 1 - matchlen, subj->pos - 1, contents, 1);
-  }
-
-  // finally, try to match an html tag
-  if (subj->pos + 2 <= subj->input.len) {
-    int c = subj->input.data[subj->pos];
-    if (c == '!' && (subj->flags & FLAG_SKIP_HTML_COMMENT) == 0) {
-      c = subj->input.data[subj->pos+1];
-      if (c == '-' && subj->input.data[subj->pos+2] == '-') {
-	if (subj->input.data[subj->pos+3] == '>') {
-	  matchlen = 4;
-	} else if (subj->input.data[subj->pos+3] == '-' &&
-                   subj->input.data[subj->pos+4] == '>') {
-          matchlen = 5;
-        } else {
-          matchlen = scan_html_comment(&subj->input, subj->pos + 1);
-          if (matchlen > 0) {
-            matchlen += 1; // prefix "<"
-	  } else { // no match through end of input: set a flag so
-		   // we don't reparse looking for -->:
-	    subj->flags |= FLAG_SKIP_HTML_COMMENT;
-	  }
-	}
-      } else if (c == '[') {
-        if ((subj->flags & FLAG_SKIP_HTML_CDATA) == 0) {
-          matchlen = scan_html_cdata(&subj->input, subj->pos + 2);
-          if (matchlen > 0) {
-            // The regex doesn't require the final "]]>". But if we're not at
-            // the end of input, it must come after the match. Otherwise,
-            // disable subsequent scans to avoid quadratic behavior.
-            matchlen += 5; // prefix "![", suffix "]]>"
-            if (subj->pos + matchlen > subj->input.len) {
-              subj->flags |= FLAG_SKIP_HTML_CDATA;
-              matchlen = 0;
-            }
-          }
-        }
-      } else if ((subj->flags & FLAG_SKIP_HTML_DECLARATION) == 0) {
-        matchlen = scan_html_declaration(&subj->input, subj->pos + 1);
-        if (matchlen > 0) {
-          matchlen += 2; // prefix "!", suffix ">"
-          if (subj->pos + matchlen > subj->input.len) {
-            subj->flags |= FLAG_SKIP_HTML_DECLARATION;
-            matchlen = 0;
-          }
-        }
-      }
-    } else if (c == '?') {
-      if ((subj->flags & FLAG_SKIP_HTML_PI) == 0) {
-        // Note that we allow an empty match.
-        matchlen = scan_html_pi(&subj->input, subj->pos + 1);
-        matchlen += 3; // prefix "?", suffix "?>"
-        if (subj->pos + matchlen > subj->input.len) {
-          subj->flags |= FLAG_SKIP_HTML_PI;
-          matchlen = 0;
-        }
-      }
-    } else {
-      matchlen = scan_html_tag(&subj->input, subj->pos);
-    }
-  }
-  if (matchlen > 0) {
-    const unsigned char *src = subj->input.data + subj->pos - 1;
-    bufsize_t len = matchlen + 1;
-    subj->pos += matchlen;
-    cmark_node *node = make_literal(subj, CMARK_NODE_HTML_INLINE,
-                                    subj->pos - matchlen - 1, subj->pos - 1);
-    node->data = (unsigned char *)subj->mem->realloc(NULL, len + 1);
-    memcpy(node->data, src, len);
-    node->data[len] = 0;
-    node->len = len;
-    adjust_subj_node_newlines(subj, node, matchlen, 1, options);
-    return node;
   }
 
   // if nothing matches, just return the opening <:

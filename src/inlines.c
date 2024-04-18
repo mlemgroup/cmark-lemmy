@@ -569,25 +569,25 @@ static cmark_node *handle_delim(subject *subj, unsigned char c, bool smart) {
 
   numdelims = scan_delims(subj, c, &can_open, &can_close);
 
-  printf("HANDLE DELIM '%c', count='%d'\n", c, numdelims);
+  printf("HANDLE DELIM '%c', count='%d', can_open=%d, can_close=%d\n", c, numdelims, can_open, can_close);
 
   if (c == '\'' && smart) {
     contents = cmark_chunk_literal(RIGHTSINGLEQUOTE);
-    printf("ROUTE A\n");
+    // printf("ROUTE A\n");
   } else if (c == '"' && smart) {
     contents =
         cmark_chunk_literal(can_close ? RIGHTDOUBLEQUOTE : LEFTDOUBLEQUOTE);
-    printf("ROUTE B\n");
+    // printf("ROUTE B\n");
   } else {
     contents = cmark_chunk_dup(&subj->input, subj->pos - numdelims, numdelims);
-     printf("ROUTE C\n");
+     // printf("ROUTE C\n");
   }
 
   inl_text = make_str(subj, subj->pos - numdelims, subj->pos - 1, contents);
 
   if ((can_open || can_close) && (!(c == '\'' || c == '"') || smart)) {
     push_delimiter(subj, c, can_open, can_close, inl_text);
-     printf("ROUTE D\n");
+     // printf("ROUTE D\n");
   }
 
   return inl_text;
@@ -659,6 +659,7 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
   delimiter *old_closer;
   bool opener_found;
   int openers_bottom_index = 0;
+
   bufsize_t openers_bottom[15] = {stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
@@ -667,6 +668,7 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
 
   // move back to first relevant delim.
   candidate = subj->last_delim;
+  printf("CANDIDATE '%c'\n", candidate->delim_char);
   while (candidate != NULL && candidate->position >= stack_bottom) {
     closer = candidate;
     candidate = candidate->previous;
@@ -1216,13 +1218,14 @@ static cmark_node *handle_newline(subject *subj) {
 
 static bufsize_t subject_find_special_char(subject *subj, int options) {
   // "\r\n\\`&_*[]<!"
+  // Mlem notes: added '~' and '^'
   static const int8_t SPECIAL_CHARS[256] = {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1265,6 +1268,7 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
   unsigned char c;
   bufsize_t startpos, endpos;
   c = peek_char(subj);
+  printf("PARSE INLINE CHAR '%c'\n", c);
   if (c == 0) {
     return 0;
   }
@@ -1318,6 +1322,7 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
     }
     break;
   default:
+  printf("INL DEFAULT\n");
     endpos = subject_find_special_char(subj, options);
     contents = cmark_chunk_dup(&subj->input, subj->pos, endpos - subj->pos);
     startpos = subj->pos;
@@ -1331,7 +1336,10 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
     new_inl = make_str(subj, startpos, endpos - 1, contents);
   }
   if (new_inl != NULL) {
+    printf("NEW INL \'%s\'\n", cmark_node_get_literal(new_inl));
     append_child(parent, new_inl);
+  } else {
+    printf("NO NEW INL\n");
   }
 
   return 1;
@@ -1347,9 +1355,11 @@ void cmark_parse_inlines(cmark_mem *mem, cmark_node *parent,
   subject_from_buf(mem, parent->start_line, parent->start_column - 1 + internal_offset, &subj, &content, refmap);
   cmark_chunk_rtrim(&subj.input);
 
+  printf("START READING\n");
   while (!is_eof(&subj) && parse_inline(&subj, parent, options))
     ;
 
+  printf("STOP READING\n");
   process_emphasis(&subj, 0);
   // free bracket and delim stack
   while (subj.last_delim) {

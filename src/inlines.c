@@ -26,6 +26,9 @@ static const char *RIGHTSINGLEQUOTE = "\xE2\x80\x99";
 #define make_softbreak(mem) make_simple(mem, CMARK_NODE_SOFTBREAK)
 #define make_emph(mem) make_simple(mem, CMARK_NODE_EMPH)
 #define make_strong(mem) make_simple(mem, CMARK_NODE_STRONG)
+#define make_super(mem) make_simple(mem, CMARK_NODE_SUPER)
+#define make_sub(mem) make_simple(mem, CMARK_NODE_SUB)
+#define make_strike(mem) make_simple(mem, CMARK_NODE_STRIKE)
 
 #define MAXBACKTICKS 1000
 
@@ -650,7 +653,10 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
   delimiter *old_closer;
   bool opener_found;
   int openers_bottom_index = 0;
-  bufsize_t openers_bottom[15] = {stack_bottom, stack_bottom, stack_bottom,
+
+  bufsize_t openers_bottom[21] = {stack_bottom, stack_bottom, stack_bottom,
+                                  stack_bottom, stack_bottom, stack_bottom,
+                                  stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
@@ -673,12 +679,18 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
       case '\'':
         openers_bottom_index = 1;
         break;
+      case '^':
+        openers_bottom_index = 2;
+        break;
+      case '~':
+        openers_bottom_index = 3 + (closer->can_open ? 3 : 0) + (closer->length % 3);
+        break;
       case '_':
-        openers_bottom_index = 2 +
+        openers_bottom_index = 9 +
                 (closer->can_open ? 3 : 0) + (closer->length % 3);
         break;
       case '*':
-        openers_bottom_index = 8 +
+        openers_bottom_index = 15 +
                 (closer->can_open ? 3 : 0) + (closer->length % 3);
         break;
       default:
@@ -703,7 +715,7 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
         opener = opener->previous;
       }
       old_closer = closer;
-      if (closer->delim_char == '*' || closer->delim_char == '_') {
+      if (closer->delim_char == '*' || closer->delim_char == '_' || closer->delim_char == '^' || closer->delim_char == '~') {
         if (opener_found) {
           closer = S_insert_emph(subj, opener, closer);
         } else {
@@ -755,7 +767,7 @@ static delimiter *S_insert_emph(subject *subj, delimiter *opener,
   cmark_node *closer_inl = closer->inl_text;
   bufsize_t opener_num_chars = opener_inl->len;
   bufsize_t closer_num_chars = closer_inl->len;
-  cmark_node *tmp, *tmpnext, *emph;
+  cmark_node *tmp, *tmpnext, *node;
 
   // calculate the actual number of characters used from this closer
   use_delims = (closer_num_chars >= 2 && opener_num_chars >= 2) ? 2 : 1;
@@ -778,34 +790,43 @@ static delimiter *S_insert_emph(subject *subj, delimiter *opener,
 
   // create new emph or strong, and splice it in to our inlines
   // between the opener and closer
-  emph = use_delims == 1 ? make_emph(subj->mem) : make_strong(subj->mem);
+  switch (opener->delim_char) {
+    case '^':
+      node = make_super(subj->mem);
+      break;
+    case '~':
+      node = use_delims == 1 ? make_sub(subj->mem) : make_strike(subj->mem);
+      break;
+    default:
+      node = use_delims == 1 ? make_emph(subj->mem) : make_strong(subj->mem);
+  }
 
   tmp = opener_inl->next;
   if (tmp && tmp != closer_inl) {
-    emph->first_child = tmp;
+    node->first_child = tmp;
     tmp->prev = NULL;
 
     while (tmp && tmp != closer_inl) {
       tmpnext = tmp->next;
-      tmp->parent = emph;
+      tmp->parent = node;
       if (tmpnext == closer_inl) {
-        emph->last_child = tmp;
+        node->last_child = tmp;
         tmp->next = NULL;
       }
       tmp = tmpnext;
     }
   }
 
-  opener_inl->next = emph;
-  closer_inl->prev = emph;
-  emph->prev = opener_inl;
-  emph->next = closer_inl;
-  emph->parent = opener_inl->parent;
+  opener_inl->next = node;
+  closer_inl->prev = node;
+  node->prev = opener_inl;
+  node->next = closer_inl;
+  node->parent = opener_inl->parent;
 
-  emph->start_line = opener_inl->start_line;
-  emph->end_line = closer_inl->end_line;
-  emph->start_column = opener_inl->start_column;
-  emph->end_column = closer_inl->end_column;
+  node->start_line = opener_inl->start_line;
+  node->end_line = closer_inl->end_line;
+  node->start_column = opener_inl->start_column;
+  node->end_column = closer_inl->end_column;
 
   // if opener has 0 characters, remove it and its associated inline
   if (opener_num_chars == 0) {
@@ -1207,13 +1228,14 @@ static cmark_node *handle_newline(subject *subj) {
 
 static bufsize_t subject_find_special_char(subject *subj, int options) {
   // "\r\n\\`&_*[]<!"
+  // Mlem notes: added '~' and '^'
   static const int8_t SPECIAL_CHARS[256] = {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1256,6 +1278,7 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
   unsigned char c;
   bufsize_t startpos, endpos;
   c = peek_char(subj);
+
   if (c == 0) {
     return 0;
   }
@@ -1278,6 +1301,8 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
     break;
   case '*':
   case '_':
+  case '~': 
+  case '^':
   case '\'':
   case '"':
     new_inl = handle_delim(subj, c, (options & CMARK_OPT_SMART) != 0);

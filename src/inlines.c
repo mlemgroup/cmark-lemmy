@@ -569,21 +569,25 @@ static cmark_node *handle_delim(subject *subj, unsigned char c, bool smart) {
 
   numdelims = scan_delims(subj, c, &can_open, &can_close);
 
-    printf("HANDLE DELIM '%c', count='%d'\n", c, numdelims);
+  printf("HANDLE DELIM '%c', count='%d'\n", c, numdelims);
 
   if (c == '\'' && smart) {
     contents = cmark_chunk_literal(RIGHTSINGLEQUOTE);
+    printf("ROUTE A\n");
   } else if (c == '"' && smart) {
     contents =
         cmark_chunk_literal(can_close ? RIGHTDOUBLEQUOTE : LEFTDOUBLEQUOTE);
+    printf("ROUTE B\n");
   } else {
     contents = cmark_chunk_dup(&subj->input, subj->pos - numdelims, numdelims);
+     printf("ROUTE C\n");
   }
 
   inl_text = make_str(subj, subj->pos - numdelims, subj->pos - 1, contents);
 
   if ((can_open || can_close) && (!(c == '\'' || c == '"') || smart)) {
     push_delimiter(subj, c, can_open, can_close, inl_text);
+     printf("ROUTE D\n");
   }
 
   return inl_text;

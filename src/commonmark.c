@@ -385,6 +385,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     } else {
       LIT("^");
     }
+    break;
 
   case CMARK_NODE_STRIKE:
     if (entering) {
@@ -400,6 +401,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     } else {
       LIT("~");
     }
+    break;
 
   case CMARK_NODE_EMPH:
     // If we have EMPH(EMPH(x)), we need to use *_x_*

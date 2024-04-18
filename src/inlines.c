@@ -26,6 +26,9 @@ static const char *RIGHTSINGLEQUOTE = "\xE2\x80\x99";
 #define make_softbreak(mem) make_simple(mem, CMARK_NODE_SOFTBREAK)
 #define make_emph(mem) make_simple(mem, CMARK_NODE_EMPH)
 #define make_strong(mem) make_simple(mem, CMARK_NODE_STRONG)
+#define make_super(mem) make_simple(mem, CMARK_NODE_SUPER)
+#define make_sub(mem) make_simple(mem, CMARK_NODE_SUB)
+#define make_strike(mem) make_simple(mem, CMARK_NODE_STRIKE)
 
 #define MAXBACKTICKS 1000
 
@@ -1278,6 +1281,8 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
     break;
   case '*':
   case '_':
+  case '~': 
+  case '^':
   case '\'':
   case '"':
     new_inl = handle_delim(subj, c, (options & CMARK_OPT_SMART) != 0);

@@ -17,13 +17,32 @@ static const cmark_node_type node_types[] = {
     CMARK_NODE_PARAGRAPH, CMARK_NODE_HEADING,     CMARK_NODE_THEMATIC_BREAK,
     CMARK_NODE_TEXT,      CMARK_NODE_SOFTBREAK,   CMARK_NODE_LINEBREAK,
     CMARK_NODE_CODE,      CMARK_NODE_EMPH,
-    CMARK_NODE_STRONG,    CMARK_NODE_LINK,        CMARK_NODE_IMAGE};
+    CMARK_NODE_STRONG,    CMARK_NODE_SUPER, CMARK_NODE_SUB, CMARK_NODE_STRIKE, CMARK_NODE_LINK,        CMARK_NODE_IMAGE};
 static const int num_node_types = sizeof(node_types) / sizeof(*node_types);
 
 static void test_content(test_batch_runner *runner, cmark_node_type type,
                          int allowed_content);
 
 static void test_continuation_byte(test_batch_runner *runner, const char *utf8);
+
+static void test_mlem_additions(test_batch_runner *runner) {
+  static const char markdown[] = "## Header\n"
+                                 "\n"
+                                 "~~item~~\n";
+
+  cmark_node *doc =
+      cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
+
+  cmark_node *heading = cmark_node_first_child(doc);
+  INT_EQ(runner, cmark_node_get_heading_level(heading), 2, "get_heading_level");
+
+  cmark_node *paragraph = cmark_node_next(heading);
+  cmark_node *strike = cmark_node_first_child(paragraph);
+  cmark_node *text = cmark_node_first_child(strike);
+  STR_EQ(runner, cmark_node_get_literal(text), "item", "mlem1");
+
+  cmark_node_free(doc);
+}
 
 static void version(test_batch_runner *runner) {
   INT_EQ(runner, cmark_version(), CMARK_VERSION, "cmark_version");
@@ -355,7 +374,7 @@ void hierarchy(test_batch_runner *runner) {
   int all_inlines = (1 << CMARK_NODE_TEXT) | (1 << CMARK_NODE_SOFTBREAK) |
                     (1 << CMARK_NODE_LINEBREAK) | (1 << CMARK_NODE_CODE) |
                     (1 << CMARK_NODE_EMPH) |
-                    (1 << CMARK_NODE_STRONG) | (1 << CMARK_NODE_LINK) |
+                    (1 << CMARK_NODE_STRONG) | (1 << CMARK_NODE_SUPER) | (1 << CMARK_NODE_SUB) | (1 << CMARK_NODE_STRIKE) | (1 << CMARK_NODE_LINK) |
                     (1 << CMARK_NODE_IMAGE);
 
   test_content(runner, CMARK_NODE_DOCUMENT, top_level_blocks);
@@ -372,6 +391,9 @@ void hierarchy(test_batch_runner *runner) {
   test_content(runner, CMARK_NODE_CODE, 0);
   test_content(runner, CMARK_NODE_EMPH, all_inlines);
   test_content(runner, CMARK_NODE_STRONG, all_inlines);
+  test_content(runner, CMARK_NODE_SUPER, all_inlines);
+  test_content(runner, CMARK_NODE_SUB, all_inlines);
+  test_content(runner, CMARK_NODE_STRIKE, all_inlines);
   test_content(runner, CMARK_NODE_LINK, all_inlines);
   test_content(runner, CMARK_NODE_IMAGE, all_inlines);
 }
@@ -535,6 +557,7 @@ int main(void) {
   utf8(runner);
   test_cplusplus(runner);
   test_feed_across_line_ending(runner);
+  test_mlem_additions(runner);
   sub_document(runner);
 
   test_print_summary(runner);

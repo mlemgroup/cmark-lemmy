@@ -59,6 +59,9 @@ static bool S_can_contain(cmark_node *node, cmark_node *child) {
   case CMARK_NODE_HEADING:
   case CMARK_NODE_EMPH:
   case CMARK_NODE_STRONG:
+  case CMARK_NODE_SUPER:
+  case CMARK_NODE_SUB:
+  case CMARK_NODE_STRIKE:
   case CMARK_NODE_LINK:
   case CMARK_NODE_IMAGE:
   case CMARK_NODE_CUSTOM_INLINE:
@@ -193,6 +196,12 @@ const char *cmark_node_get_type_string(cmark_node *node) {
     return "emph";
   case CMARK_NODE_STRONG:
     return "strong";
+  case CMARK_NODE_SUPER:
+    return "super";
+  case CMARK_NODE_SUB:
+    return "sub";
+  case CMARK_NODE_STRIKE:
+    return "strike";
   case CMARK_NODE_LINK:
     return "link";
   case CMARK_NODE_IMAGE:

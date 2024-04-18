@@ -569,25 +569,19 @@ static cmark_node *handle_delim(subject *subj, unsigned char c, bool smart) {
 
   numdelims = scan_delims(subj, c, &can_open, &can_close);
 
-  printf("HANDLE DELIM '%c', count='%d', can_open=%d, can_close=%d\n", c, numdelims, can_open, can_close);
-
   if (c == '\'' && smart) {
     contents = cmark_chunk_literal(RIGHTSINGLEQUOTE);
-    // printf("ROUTE A\n");
   } else if (c == '"' && smart) {
     contents =
         cmark_chunk_literal(can_close ? RIGHTDOUBLEQUOTE : LEFTDOUBLEQUOTE);
-    // printf("ROUTE B\n");
   } else {
     contents = cmark_chunk_dup(&subj->input, subj->pos - numdelims, numdelims);
-     // printf("ROUTE C\n");
   }
 
   inl_text = make_str(subj, subj->pos - numdelims, subj->pos - 1, contents);
 
   if ((can_open || can_close) && (!(c == '\'' || c == '"') || smart)) {
     push_delimiter(subj, c, can_open, can_close, inl_text);
-     // printf("ROUTE D\n");
   }
 
   return inl_text;
@@ -660,7 +654,9 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
   bool opener_found;
   int openers_bottom_index = 0;
 
-  bufsize_t openers_bottom[15] = {stack_bottom, stack_bottom, stack_bottom,
+  bufsize_t openers_bottom[21] = {stack_bottom, stack_bottom, stack_bottom,
+                                  stack_bottom, stack_bottom, stack_bottom,
+                                  stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
                                   stack_bottom, stack_bottom, stack_bottom,
@@ -668,7 +664,6 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
 
   // move back to first relevant delim.
   candidate = subj->last_delim;
-  printf("CANDIDATE '%c'\n", candidate->delim_char);
   while (candidate != NULL && candidate->position >= stack_bottom) {
     closer = candidate;
     candidate = candidate->previous;
@@ -684,12 +679,18 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
       case '\'':
         openers_bottom_index = 1;
         break;
+      case '^':
+        openers_bottom_index = 2;
+        break;
+      case '~':
+        openers_bottom_index = 3 + (closer->can_open ? 3 : 0) + (closer->length % 3);
+        break;
       case '_':
-        openers_bottom_index = 2 +
+        openers_bottom_index = 9 +
                 (closer->can_open ? 3 : 0) + (closer->length % 3);
         break;
       case '*':
-        openers_bottom_index = 8 +
+        openers_bottom_index = 15 +
                 (closer->can_open ? 3 : 0) + (closer->length % 3);
         break;
       default:
@@ -714,7 +715,7 @@ static void process_emphasis(subject *subj, bufsize_t stack_bottom) {
         opener = opener->previous;
       }
       old_closer = closer;
-      if (closer->delim_char == '*' || closer->delim_char == '_') {
+      if (closer->delim_char == '*' || closer->delim_char == '_' || closer->delim_char == '^' || closer->delim_char == '~') {
         if (opener_found) {
           closer = S_insert_emph(subj, opener, closer);
         } else {
@@ -766,7 +767,7 @@ static delimiter *S_insert_emph(subject *subj, delimiter *opener,
   cmark_node *closer_inl = closer->inl_text;
   bufsize_t opener_num_chars = opener_inl->len;
   bufsize_t closer_num_chars = closer_inl->len;
-  cmark_node *tmp, *tmpnext, *emph;
+  cmark_node *tmp, *tmpnext, *node;
 
   // calculate the actual number of characters used from this closer
   use_delims = (closer_num_chars >= 2 && opener_num_chars >= 2) ? 2 : 1;
@@ -789,34 +790,43 @@ static delimiter *S_insert_emph(subject *subj, delimiter *opener,
 
   // create new emph or strong, and splice it in to our inlines
   // between the opener and closer
-  emph = use_delims == 1 ? make_emph(subj->mem) : make_strong(subj->mem);
+  switch (opener->delim_char) {
+    case '^':
+      node = make_super(subj->mem);
+      break;
+    case '~':
+      node = use_delims == 1 ? make_sub(subj->mem) : make_strike(subj->mem);
+      break;
+    default:
+      node = use_delims == 1 ? make_emph(subj->mem) : make_strong(subj->mem);
+  }
 
   tmp = opener_inl->next;
   if (tmp && tmp != closer_inl) {
-    emph->first_child = tmp;
+    node->first_child = tmp;
     tmp->prev = NULL;
 
     while (tmp && tmp != closer_inl) {
       tmpnext = tmp->next;
-      tmp->parent = emph;
+      tmp->parent = node;
       if (tmpnext == closer_inl) {
-        emph->last_child = tmp;
+        node->last_child = tmp;
         tmp->next = NULL;
       }
       tmp = tmpnext;
     }
   }
 
-  opener_inl->next = emph;
-  closer_inl->prev = emph;
-  emph->prev = opener_inl;
-  emph->next = closer_inl;
-  emph->parent = opener_inl->parent;
+  opener_inl->next = node;
+  closer_inl->prev = node;
+  node->prev = opener_inl;
+  node->next = closer_inl;
+  node->parent = opener_inl->parent;
 
-  emph->start_line = opener_inl->start_line;
-  emph->end_line = closer_inl->end_line;
-  emph->start_column = opener_inl->start_column;
-  emph->end_column = closer_inl->end_column;
+  node->start_line = opener_inl->start_line;
+  node->end_line = closer_inl->end_line;
+  node->start_column = opener_inl->start_column;
+  node->end_column = closer_inl->end_column;
 
   // if opener has 0 characters, remove it and its associated inline
   if (opener_num_chars == 0) {
@@ -1268,7 +1278,7 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
   unsigned char c;
   bufsize_t startpos, endpos;
   c = peek_char(subj);
-  printf("PARSE INLINE CHAR '%c'\n", c);
+
   if (c == 0) {
     return 0;
   }
@@ -1322,7 +1332,6 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
     }
     break;
   default:
-  printf("INL DEFAULT\n");
     endpos = subject_find_special_char(subj, options);
     contents = cmark_chunk_dup(&subj->input, subj->pos, endpos - subj->pos);
     startpos = subj->pos;
@@ -1336,10 +1345,7 @@ static int parse_inline(subject *subj, cmark_node *parent, int options) {
     new_inl = make_str(subj, startpos, endpos - 1, contents);
   }
   if (new_inl != NULL) {
-    printf("NEW INL \'%s\'\n", cmark_node_get_literal(new_inl));
     append_child(parent, new_inl);
-  } else {
-    printf("NO NEW INL\n");
   }
 
   return 1;
@@ -1355,11 +1361,9 @@ void cmark_parse_inlines(cmark_mem *mem, cmark_node *parent,
   subject_from_buf(mem, parent->start_line, parent->start_column - 1 + internal_offset, &subj, &content, refmap);
   cmark_chunk_rtrim(&subj.input);
 
-  printf("START READING\n");
   while (!is_eof(&subj) && parse_inline(&subj, parent, options))
     ;
 
-  printf("STOP READING\n");
   process_emphasis(&subj, 0);
   // free bracket and delim stack
   while (subj.last_delim) {

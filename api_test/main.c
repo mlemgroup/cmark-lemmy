@@ -12,12 +12,14 @@
 #define UTF8_REPL "\xEF\xBF\xBD"
 
 static const cmark_node_type node_types[] = {
-    CMARK_NODE_DOCUMENT,  CMARK_NODE_BLOCK_QUOTE, CMARK_NODE_LIST,
-    CMARK_NODE_ITEM,      CMARK_NODE_CODE_BLOCK,  
-    CMARK_NODE_PARAGRAPH, CMARK_NODE_HEADING,     CMARK_NODE_THEMATIC_BREAK,
-    CMARK_NODE_TEXT,      CMARK_NODE_SOFTBREAK,   CMARK_NODE_LINEBREAK,
-    CMARK_NODE_CODE,      CMARK_NODE_EMPH,
-    CMARK_NODE_STRONG,    CMARK_NODE_SUPER, CMARK_NODE_SUB, CMARK_NODE_STRIKE, CMARK_NODE_LINK,        CMARK_NODE_IMAGE};
+    CMARK_NODE_DOCUMENT,   CMARK_NODE_BLOCK_QUOTE,     CMARK_NODE_LIST,
+    CMARK_NODE_ITEM,       CMARK_NODE_CODE_BLOCK,      CMARK_NODE_PARAGRAPH,
+    CMARK_NODE_HEADING,    CMARK_NODE_THEMATIC_BREAK,  CMARK_NODE_TEXT,
+    CMARK_NODE_SOFTBREAK,  CMARK_NODE_LINEBREAK,       CMARK_NODE_CODE,
+    CMARK_NODE_EMPH,       CMARK_NODE_STRONG,          CMARK_NODE_SUPER,
+    CMARK_NODE_SUB,        CMARK_NODE_STRIKE,          CMARK_NODE_LINK,
+    CMARK_NODE_IMAGE
+};
 static const int num_node_types = sizeof(node_types) / sizeof(*node_types);
 
 static void test_content(test_batch_runner *runner, cmark_node_type type,
@@ -26,21 +28,68 @@ static void test_content(test_batch_runner *runner, cmark_node_type type,
 static void test_continuation_byte(test_batch_runner *runner, const char *utf8);
 
 static void test_mlem_additions(test_batch_runner *runner) {
-  static const char markdown[] = "*hello*world\n";
+  static const char markdown[] = "~~one~~^two^~three~\n";
 
-  printf("TEST CHECKPOINT 1\n");
   cmark_node *doc =
       cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
 
-  printf("TEST CHECKPOINT 2\n");
   cmark_node *paragraph = cmark_node_first_child(doc);
-  printf("TEST CHECKPOINT 3\n");
-  cmark_node *strike = cmark_node_first_child(paragraph);
-  printf("TEST CHECKPOINT 4\n");
-  // cmark_node *text = cmark_node_first_child(strike);
-  // STR_EQ(runner, cmark_node_get_literal(text), "hello", "mlem_compare_child");
 
+  cmark_node *strike_node = cmark_node_first_child(paragraph);
+  cmark_node *super_node = cmark_node_next(strike_node);
+  cmark_node *sub_node = cmark_node_next(super_node);
+
+  cmark_node *text = cmark_node_first_child(strike_node);
+  cmark_node *text2 = cmark_node_first_child(super_node);
+  cmark_node *text3 = cmark_node_first_child(sub_node);
+
+  INT_EQ(runner, strike_node->type, CMARK_NODE_STRIKE, "mlem_strike");
+  INT_EQ(runner, super_node->type, CMARK_NODE_SUPER, "mlem_super");
+  INT_EQ(runner, sub_node->type, CMARK_NODE_SUB, "mlem_sub");
+
+  STR_EQ(runner, cmark_node_get_literal(text), "one", "mlem_strike_text");
+  STR_EQ(runner, cmark_node_get_literal(text2), "two", "mlem_super_text");
+  STR_EQ(runner, cmark_node_get_literal(text3), "three", "mlem_sub_text");
   cmark_node_free(doc);
+}
+
+static void test_mlem_nested(test_batch_runner *runner) {
+  static const char markdown[] = "~~one ~two~ three~~\n";
+
+  cmark_node *doc =
+      cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
+
+  cmark_node *paragraph = cmark_node_first_child(doc);
+
+  cmark_node *strike_node = cmark_node_first_child(paragraph);
+  cmark_node *sub_node = cmark_node_next(cmark_node_first_child(strike_node));
+
+  cmark_node *text = cmark_node_first_child(sub_node);
+
+  INT_EQ(runner, strike_node->type, CMARK_NODE_STRIKE, "mlem_strike");
+  INT_EQ(runner, sub_node->type, CMARK_NODE_SUB, "mlem_sub");
+
+  STR_EQ(runner, cmark_node_get_literal(text), "two", "mlem_nested_sub");
+  cmark_node_free(doc);
+}
+
+static void test_mlem_create_tree(test_batch_runner *runner) {
+    char *commonmark;
+
+    cmark_node *doc = cmark_node_new(CMARK_NODE_DOCUMENT);
+    cmark_node *p = cmark_node_new(CMARK_NODE_PARAGRAPH);
+    cmark_node_append_child(doc, p);
+    cmark_node *strike = cmark_node_new(CMARK_NODE_STRIKE);
+    cmark_node_append_child(p, strike);
+    cmark_node *text = cmark_node_new(CMARK_NODE_TEXT);
+    cmark_node_append_child(strike, text);
+    cmark_node_set_literal(text, "Hello");
+
+    commonmark = cmark_render_commonmark(doc, CMARK_OPT_DEFAULT, 0);
+    STR_EQ(runner, commonmark, "~~Hello~~\n", "mlem_create_tree");
+
+    free(commonmark);
+    cmark_node_free(doc);
 }
 
 static void version(test_batch_runner *runner) {
@@ -367,13 +416,13 @@ void hierarchy(test_batch_runner *runner) {
   int list_item_flag = 1 << CMARK_NODE_ITEM;
   int top_level_blocks =
       (1 << CMARK_NODE_BLOCK_QUOTE) | (1 << CMARK_NODE_LIST) |
-      (1 << CMARK_NODE_CODE_BLOCK) |
-      (1 << CMARK_NODE_PARAGRAPH) | (1 << CMARK_NODE_HEADING) |
-      (1 << CMARK_NODE_THEMATIC_BREAK);
+      (1 << CMARK_NODE_CODE_BLOCK) | (1 << CMARK_NODE_PARAGRAPH) |
+      (1 << CMARK_NODE_HEADING) | (1 << CMARK_NODE_THEMATIC_BREAK);
   int all_inlines = (1 << CMARK_NODE_TEXT) | (1 << CMARK_NODE_SOFTBREAK) |
                     (1 << CMARK_NODE_LINEBREAK) | (1 << CMARK_NODE_CODE) |
-                    (1 << CMARK_NODE_EMPH) |
-                    (1 << CMARK_NODE_STRONG) | (1 << CMARK_NODE_SUPER) | (1 << CMARK_NODE_SUB) | (1 << CMARK_NODE_STRIKE) | (1 << CMARK_NODE_LINK) |
+                    (1 << CMARK_NODE_EMPH) | (1 << CMARK_NODE_STRONG) |
+                    (1 << CMARK_NODE_SUPER) | (1 << CMARK_NODE_SUB) |
+                    (1 << CMARK_NODE_STRIKE) | (1 << CMARK_NODE_LINK) |
                     (1 << CMARK_NODE_IMAGE);
 
   test_content(runner, CMARK_NODE_DOCUMENT, top_level_blocks);
@@ -390,9 +439,9 @@ void hierarchy(test_batch_runner *runner) {
   test_content(runner, CMARK_NODE_CODE, 0);
   test_content(runner, CMARK_NODE_EMPH, all_inlines);
   test_content(runner, CMARK_NODE_STRONG, all_inlines);
-  // test_content(runner, CMARK_NODE_SUPER, all_inlines);
-  // test_content(runner, CMARK_NODE_SUB, all_inlines);
-  // test_content(runner, CMARK_NODE_STRIKE, all_inlines);
+  test_content(runner, CMARK_NODE_SUPER, all_inlines);
+  test_content(runner, CMARK_NODE_SUB, all_inlines);
+  test_content(runner, CMARK_NODE_STRIKE, all_inlines);
   test_content(runner, CMARK_NODE_LINK, all_inlines);
   test_content(runner, CMARK_NODE_IMAGE, all_inlines);
 }
@@ -543,23 +592,25 @@ int main(void) {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
 
-  // version(runner);
-  // accessors(runner);
-  // free_parent(runner);
-  // node_check(runner);
-  // iterator(runner);
-  // iterator_delete(runner);
-  // create_tree(runner);
-  // custom_nodes(runner);
-  // hierarchy(runner);
-  // render_commonmark(runner);
-  // utf8(runner);
-  // test_cplusplus(runner);
-  // test_feed_across_line_ending(runner);
+  version(runner);
+  accessors(runner);
+  free_parent(runner);
+  node_check(runner);
+  iterator(runner);
+  iterator_delete(runner);
+  create_tree(runner);
+  custom_nodes(runner);
+  hierarchy(runner);
+  render_commonmark(runner);
+  utf8(runner);
+  test_cplusplus(runner);
+  test_feed_across_line_ending(runner);
   test_mlem_additions(runner);
-  // sub_document(runner);
+  test_mlem_nested(runner);
+  test_mlem_create_tree(runner);
+  sub_document(runner);
 
-  // test_print_summary(runner);
+  test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;
   free(runner);
 

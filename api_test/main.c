@@ -28,10 +28,12 @@ static void test_continuation_byte(test_batch_runner *runner, const char *utf8);
 static void test_mlem_additions(test_batch_runner *runner) {
   static const char markdown[] = "## Header\n"
                                  "\n"
-                                 "~~item~~\n";
+                                 "__item__\n";
 
+  printf("\nSTART PARSING MLEM\n");
   cmark_node *doc =
       cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
+  printf("STOP PARSING MLEM\n\n");
 
   cmark_node *heading = cmark_node_first_child(doc);
   INT_EQ(runner, cmark_node_get_heading_level(heading), 2, "get_heading_level");

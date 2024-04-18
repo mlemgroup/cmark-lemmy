@@ -569,6 +569,8 @@ static cmark_node *handle_delim(subject *subj, unsigned char c, bool smart) {
 
   numdelims = scan_delims(subj, c, &can_open, &can_close);
 
+    printf("HANDLE DELIM '%c', count='%d'\n", c, numdelims);
+
   if (c == '\'' && smart) {
     contents = cmark_chunk_literal(RIGHTSINGLEQUOTE);
   } else if (c == '"' && smart) {

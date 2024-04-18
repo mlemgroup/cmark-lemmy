@@ -561,9 +561,12 @@ cmark_node *cmark_parse_document(const char *buffer, size_t len, int options) {
   cmark_parser *parser = cmark_parser_new(options);
   cmark_node *document;
 
+  // Blocks are parsed here
   S_parser_feed(parser, (const unsigned char *)buffer, len, true);
 
+  // Inlines are parsed here
   document = cmark_parser_finish(parser);
+
   cmark_parser_free(parser);
   return document;
 }

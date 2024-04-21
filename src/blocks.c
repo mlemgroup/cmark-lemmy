@@ -164,6 +164,7 @@ static inline bool can_contain(cmark_node_type parent_type,
                                cmark_node_type child_type) {
   return (parent_type == CMARK_NODE_DOCUMENT ||
           parent_type == CMARK_NODE_BLOCK_QUOTE ||
+          parent_type == CMARK_NODE_SPOILER ||
           parent_type == CMARK_NODE_ITEM ||
           (parent_type == CMARK_NODE_LIST && child_type == CMARK_NODE_ITEM));
 }
@@ -818,6 +819,37 @@ static bool parse_node_item_prefix(cmark_parser *parser, cmark_chunk *input,
   return res;
 }
 
+static bool parse_spoiler_prefix(cmark_parser *parser, cmark_chunk *input,
+                                 cmark_node *container,
+                                 bool *should_continue) {
+  bool res = false;
+
+  bufsize_t matched = 0;
+
+  if (parser->indent <= 3 && (peek_at(input, parser->first_nonspace) == ':')) {
+    matched = scan_close_spoiler_fence(input, parser->first_nonspace);
+  }
+
+  if (matched >= container->as.spoiler.fence_length) {
+    // closing fence - and since we're at
+    // the end of a line, we can stop processing it:
+    *should_continue = false;
+    S_advance_offset(parser, input, matched, false);
+    parser->current = finalize(parser, container);
+  } else {
+    // skip opt. spaces of fence parser->offset
+    int i = container->as.code.fence_offset;
+
+    while (i > 0 && S_is_space_or_tab(peek_at(input, parser->offset))) {
+      S_advance_offset(parser, input, 1, true);
+      i--;
+    }
+    res = true;
+  }
+
+  return res;
+}
+
 static bool parse_code_block_prefix(cmark_parser *parser, cmark_chunk *input,
                                     cmark_node *container,
                                     bool *should_continue) {
@@ -919,6 +951,10 @@ static cmark_node *check_open_blocks(cmark_parser *parser, cmark_chunk *input,
       if (!parse_code_block_prefix(parser, input, container, &should_continue))
         goto done;
       break;
+    case CMARK_NODE_SPOILER:
+      if (!parse_spoiler_prefix(parser, input, container, &should_continue))
+        goto done;
+      break;
     case CMARK_NODE_HEADING:
       // a heading can never contain more than one line
       goto done;
@@ -1009,6 +1045,17 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
       (*container)->as.code.fence_offset =
           (int8_t)(parser->first_nonspace - parser->offset);
       (*container)->as.code.info = NULL;
+      S_advance_offset(parser, input,
+                       parser->first_nonspace + matched - parser->offset,
+                       false);
+    } else if (!indented && (matched = scan_open_spoiler_fence(
+                                 input, parser->first_nonspace))) {
+      *container = add_child(parser, *container, CMARK_NODE_SPOILER,
+                             parser->first_nonspace + 1);
+      (*container)->as.spoiler.fence_length = (matched > 255) ? 255 : matched;
+      (*container)->as.spoiler.fence_offset =
+          (int8_t)(parser->first_nonspace - parser->offset);
+      (*container)->as.spoiler.info = NULL;
       S_advance_offset(parser, input,
                        parser->first_nonspace + matched - parser->offset,
                        false);

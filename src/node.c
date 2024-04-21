@@ -53,6 +53,7 @@ static bool S_can_contain(cmark_node *node, cmark_node *child) {
     return child->type == CMARK_NODE_ITEM;
 
   case CMARK_NODE_CUSTOM_BLOCK:
+  case CMARK_NODE_SPOILER:
     return true;
 
   case CMARK_NODE_PARAGRAPH:
@@ -174,6 +175,8 @@ const char *cmark_node_get_type_string(cmark_node *node) {
     return "item";
   case CMARK_NODE_CODE_BLOCK:
     return "code_block";
+  case CMARK_NODE_SPOILER:
+    return "spoiler";
   case CMARK_NODE_CUSTOM_BLOCK:
     return "custom_block";
   case CMARK_NODE_PARAGRAPH:

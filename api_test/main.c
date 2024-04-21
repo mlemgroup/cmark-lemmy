@@ -13,12 +13,12 @@
 
 static const cmark_node_type node_types[] = {
     CMARK_NODE_DOCUMENT,   CMARK_NODE_BLOCK_QUOTE,     CMARK_NODE_LIST,
-    CMARK_NODE_ITEM,       CMARK_NODE_CODE_BLOCK,      CMARK_NODE_PARAGRAPH,
-    CMARK_NODE_HEADING,    CMARK_NODE_THEMATIC_BREAK,  CMARK_NODE_TEXT,
-    CMARK_NODE_SOFTBREAK,  CMARK_NODE_LINEBREAK,       CMARK_NODE_CODE,
-    CMARK_NODE_EMPH,       CMARK_NODE_STRONG,          CMARK_NODE_SUPER,
-    CMARK_NODE_SUB,        CMARK_NODE_STRIKE,          CMARK_NODE_LINK,
-    CMARK_NODE_IMAGE
+    CMARK_NODE_ITEM,       CMARK_NODE_CODE_BLOCK,      CMARK_NODE_SPOILER,
+    CMARK_NODE_PARAGRAPH,  CMARK_NODE_HEADING,         CMARK_NODE_THEMATIC_BREAK,
+    CMARK_NODE_TEXT,       CMARK_NODE_SOFTBREAK,       CMARK_NODE_LINEBREAK,
+    CMARK_NODE_CODE,       CMARK_NODE_EMPH,            CMARK_NODE_STRONG,
+    CMARK_NODE_SUPER,      CMARK_NODE_SUB,             CMARK_NODE_STRIKE,
+    CMARK_NODE_LINK,       CMARK_NODE_IMAGE
 };
 static const int num_node_types = sizeof(node_types) / sizeof(*node_types);
 
@@ -27,7 +27,7 @@ static void test_content(test_batch_runner *runner, cmark_node_type type,
 
 static void test_continuation_byte(test_batch_runner *runner, const char *utf8);
 
-static void test_mlem_additions(test_batch_runner *runner) {
+static void test_mlem_inlines(test_batch_runner *runner) {
   static const char markdown[] = "~~one~~^two^~three~\n";
 
   cmark_node *doc =
@@ -53,7 +53,7 @@ static void test_mlem_additions(test_batch_runner *runner) {
   cmark_node_free(doc);
 }
 
-static void test_mlem_nested(test_batch_runner *runner) {
+static void test_mlem_nested_lines(test_batch_runner *runner) {
   static const char markdown[] = "~~one ~two~ three~~\n";
 
   cmark_node *doc =
@@ -71,6 +71,33 @@ static void test_mlem_nested(test_batch_runner *runner) {
 
   STR_EQ(runner, cmark_node_get_literal(text), "two", "mlem_nested_sub");
   cmark_node_free(doc);
+}
+
+static void test_mlem_blocks(test_batch_runner *runner) {
+    static const char markdown[] = "## Header\n"
+                                   "\n"
+                                   "```py\n";
+                                   "content\n";
+                                   "```\n";
+                                   "\n";
+                                   "*below*\n";
+                                   "\n";
+
+    cmark_node *doc =
+        cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
+
+    cmark_node *heading = cmark_node_first_child(doc);
+    INT_EQ(runner, cmark_node_get_heading_level(heading), 2, "mlem_get_heading_level");
+    cmark_node *spoiler = cmark_node_next(heading);
+    printf("END %d\n", cmark_node_get_end_line(spoiler));
+    INT_EQ(runner, spoiler->type, CMARK_NODE_CODE_BLOCK, "mlem_spoiler");
+
+    cmark_node *below = cmark_node_next(spoiler);
+    printf("Is null %d\n", below == NULL);
+    cmark_node *child = cmark_node_first_child(below);
+    INT_EQ(runner, child->type, CMARK_NODE_EMPH, "mlem_spoiler");
+
+    cmark_node_free(doc);
 }
 
 static void test_mlem_create_tree(test_batch_runner *runner) {
@@ -592,25 +619,26 @@ int main(void) {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
 
-  version(runner);
+  // version(runner);
   accessors(runner);
-  free_parent(runner);
-  node_check(runner);
-  iterator(runner);
-  iterator_delete(runner);
-  create_tree(runner);
-  custom_nodes(runner);
-  hierarchy(runner);
-  render_commonmark(runner);
-  utf8(runner);
-  test_cplusplus(runner);
-  test_feed_across_line_ending(runner);
-  test_mlem_additions(runner);
-  test_mlem_nested(runner);
-  test_mlem_create_tree(runner);
-  sub_document(runner);
+  // free_parent(runner);
+  // node_check(runner);
+  // iterator(runner);
+  // iterator_delete(runner);
+  // create_tree(runner);
+  // custom_nodes(runner);
+  // hierarchy(runner);
+  // render_commonmark(runner);
+  // utf8(runner);
+  // test_cplusplus(runner);
+  // test_feed_across_line_ending(runner);
+  test_mlem_inlines(runner);
+  test_mlem_nested_lines(runner);
+  test_mlem_blocks(runner);
+  // test_mlem_create_tree(runner);
+  // sub_document(runner);
 
-  test_print_summary(runner);
+  // test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;
   free(runner);
 

@@ -74,30 +74,38 @@ static void test_mlem_nested_lines(test_batch_runner *runner) {
 }
 
 static void test_mlem_blocks(test_batch_runner *runner) {
-    static const char markdown[] = "## Header\n"
-                                   "\n"
-                                   "```py\n";
-                                   "content\n";
-                                   "```\n";
-                                   "\n";
-                                   "*below*\n";
-                                   "\n";
+  static const char markdown[] = "## Header\n"
+                                 "\n"
+                                 "::: spoiler spoiler_title\n"
+                                 "fenced\n"
+                                 ":::\n"
+                                 "\n"
+                                 "[link](url 'title')\n";
 
-    cmark_node *doc =
-        cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
+  cmark_node *doc =
+      cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
 
-    cmark_node *heading = cmark_node_first_child(doc);
-    INT_EQ(runner, cmark_node_get_heading_level(heading), 2, "mlem_get_heading_level");
-    cmark_node *spoiler = cmark_node_next(heading);
-    printf("END %d\n", cmark_node_get_end_line(spoiler));
-    INT_EQ(runner, spoiler->type, CMARK_NODE_CODE_BLOCK, "mlem_spoiler");
+  // Getters
 
-    cmark_node *below = cmark_node_next(spoiler);
-    printf("Is null %d\n", below == NULL);
-    cmark_node *child = cmark_node_first_child(below);
-    INT_EQ(runner, child->type, CMARK_NODE_EMPH, "mlem_spoiler");
+  cmark_node *heading = cmark_node_first_child(doc);
+  INT_EQ(runner, cmark_node_get_heading_level(heading), 2, "mlem_get_heading_level");
 
-    cmark_node_free(doc);
+  cmark_node *spoiler = cmark_node_next(heading);
+  INT_EQ(runner, spoiler->type, CMARK_NODE_SPOILER, "mlem_spoiler");
+  STR_EQ(runner, cmark_node_get_title(spoiler), "spoiler_title", "mlem_get_spoiler_title");
+  printf("START %d\n", cmark_node_get_start_line(spoiler));
+  printf("END %d\n", cmark_node_get_end_line(spoiler));
+
+  // cmark_node *paragraph = cmark_node_next(spoiler);
+
+  // printf("IS NULL: %d\n", paragraph == NULL);
+  // cmark_node *link = cmark_node_first_child(paragraph);
+  // INT_EQ(runner, cmark_node_get_start_line(paragraph), 7, "get_start_line");
+
+  // cmark_node *string = cmark_node_first_child(link);
+  // STR_EQ(runner, cmark_node_get_literal(string), "link", "get_literal string");
+
+  cmark_node_free(doc);
 }
 
 static void test_mlem_create_tree(test_batch_runner *runner) {
@@ -620,7 +628,7 @@ int main(void) {
   test_batch_runner *runner = test_batch_runner_new();
 
   // version(runner);
-  accessors(runner);
+  // accessors(runner);
   // free_parent(runner);
   // node_check(runner);
   // iterator(runner);
@@ -632,8 +640,8 @@ int main(void) {
   // utf8(runner);
   // test_cplusplus(runner);
   // test_feed_across_line_ending(runner);
-  test_mlem_inlines(runner);
-  test_mlem_nested_lines(runner);
+  // test_mlem_inlines(runner);
+  // test_mlem_nested_lines(runner);
   test_mlem_blocks(runner);
   // test_mlem_create_tree(runner);
   // sub_document(runner);

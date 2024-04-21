@@ -31,7 +31,7 @@ typedef struct {
 } cmark_code;
 
 typedef struct {
-  unsigned char *info;
+  unsigned char *title;
   uint8_t fence_length;
   uint8_t fence_offset;
 } cmark_spoiler;

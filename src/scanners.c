@@ -5553,6 +5553,7 @@ bufsize_t _scan_close_code_fence(const unsigned char *p) {
 bufsize_t _scan_open_spoiler_fence(const unsigned char *p) {
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
+  int numberOfColons = 3;
   {
     unsigned char yych;
     static const unsigned char yybm[] = {
@@ -5598,6 +5599,7 @@ bufsize_t _scan_open_spoiler_fence(const unsigned char *p) {
   myy100:
     yych = *++p;
     if (yybm[0 + yych] & 16) {
+      numberOfColons++;
       goto myy100;
     }
     p--;
@@ -5669,7 +5671,7 @@ bufsize_t _scan_open_spoiler_fence(const unsigned char *p) {
   myy510:
     ++p;
     p = marker;
-    { return (bufsize_t)(p - start); }
+    { return (bufsize_t)(numberOfColons); }
   }
 }
 
@@ -5783,6 +5785,7 @@ bufsize_t _scan_close_spoiler_fence(const unsigned char *p) {
   myy523:
     ++p;
     p = marker;
+    printf("FOUND SPOILER CLOSE\n");
     { return (bufsize_t)(p - start); }
   myy524:
     yych = *++p;
@@ -5803,6 +5806,7 @@ bufsize_t _scan_close_spoiler_fence(const unsigned char *p) {
   myy525:
     ++p;
     p = marker;
+    printf("FOUND SPOILER CLOSE\n");
     { return (bufsize_t)(p - start); }
   }
 }

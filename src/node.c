@@ -535,6 +535,8 @@ const char *cmark_node_get_title(cmark_node *node) {
   case CMARK_NODE_LINK:
   case CMARK_NODE_IMAGE:
     return node->as.link.title ? (char *)node->as.link.title : "";
+  case CMARK_NODE_SPOILER:
+    return node->as.spoiler.title ? (char *)node->as.spoiler.title : "";
   default:
     break;
   }

@@ -5785,7 +5785,6 @@ bufsize_t _scan_close_spoiler_fence(const unsigned char *p) {
   myy523:
     ++p;
     p = marker;
-    printf("FOUND SPOILER CLOSE\n");
     { return (bufsize_t)(p - start); }
   myy524:
     yych = *++p;
@@ -5806,7 +5805,6 @@ bufsize_t _scan_close_spoiler_fence(const unsigned char *p) {
   myy525:
     ++p;
     p = marker;
-    printf("FOUND SPOILER CLOSE\n");
     { return (bufsize_t)(p - start); }
   }
 }

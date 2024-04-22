@@ -115,6 +115,9 @@ static void S_free_nodes(cmark_node *e) {
       mem->free(e->data);
       mem->free(e->as.code.info);
       break;
+    case CMARK_NODE_SPOILER:
+      mem->free(e->data);
+      mem->free(e->as.spoiler.title);
     case CMARK_NODE_TEXT:
     case CMARK_NODE_CODE:
       mem->free(e->data);

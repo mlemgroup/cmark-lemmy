@@ -177,7 +177,7 @@ static inline bool accepts_lines(cmark_node_type block_type) {
 }
 
 static inline bool contains_inlines(cmark_node_type block_type) {
-  return (block_type == CMARK_NODE_PARAGRAPH ||
+  return (block_type == CMARK_NODE_PARAGRAPH || block_type == CMARK_NODE_SPOILER ||
           block_type == CMARK_NODE_HEADING);
 }
 
@@ -345,6 +345,8 @@ static cmark_node *finalize(cmark_parser *parser, cmark_node *b) {
     } else {
       cmark_strbuf tmp = CMARK_BUF_INIT(parser->mem);
       houdini_unescape_html_f(&tmp, node_content->ptr, pos);
+      cmark_strbuf_trim(&tmp);
+      cmark_strbuf_drop(&tmp, 7);
       cmark_strbuf_trim(&tmp);
       cmark_strbuf_unescape(&tmp);
       b->as.spoiler.title = cmark_strbuf_detach(&tmp);
@@ -852,13 +854,10 @@ static bool parse_spoiler_prefix(cmark_parser *parser, cmark_chunk *input,
                                  cmark_node *container,
                                  bool *should_continue) {
   bool res = false;
-  printf("PARSE SPOILER PREFIX\n");
   bufsize_t matched = 0;
 
   if (parser->indent <= 3 && (peek_at(input, parser->first_nonspace) == ':')) {
     matched = scan_close_spoiler_fence(input, parser->first_nonspace);
-    printf("MATCHED: %d\n", matched);
-    printf("FENCE LENGTH: %d\n", container->as.spoiler.fence_length);
   }
 
   if (matched >= container->as.spoiler.fence_length) {
@@ -885,7 +884,6 @@ static bool parse_code_block_prefix(cmark_parser *parser, cmark_chunk *input,
                                     cmark_node *container,
                                     bool *should_continue) {
   bool res = false;
-  printf("PARSE CODE BLOCK PREFIX\n");
   if (!container->as.code.fenced) { // indented
     if (parser->indent >= CODE_INDENT) {
       S_advance_offset(parser, input, CODE_INDENT, true);
@@ -901,8 +899,6 @@ static bool parse_code_block_prefix(cmark_parser *parser, cmark_chunk *input,
     if (parser->indent <= 3 && (peek_at(input, parser->first_nonspace) ==
                                 container->as.code.fence_char)) {
       matched = scan_close_code_fence(input, parser->first_nonspace);
-      printf("MATCHED: %d\n", matched);
-      printf("FENCE LENGTH: %d\n", container->as.code.fence_length);
     }
 
     if (matched >= container->as.code.fence_length) {
@@ -1007,7 +1003,6 @@ done:
     container = container->parent; // back up to last matching node
   }
 
-  printf("SHOULD CONT %d\n", should_continue);
   if (!should_continue) {
     container = NULL;
   }
@@ -1076,7 +1071,6 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
       (*container)->as.code.fenced = true;
       (*container)->as.code.fence_char = peek_at(input, parser->first_nonspace);
       (*container)->as.code.fence_length = (matched > 255) ? 255 : matched;
-      printf("FENCE LENGTH2: %d\n", (*container)->as.code.fence_length);
       (*container)->as.code.fence_offset =
           (int8_t)(parser->first_nonspace - parser->offset);
       (*container)->as.code.info = NULL;
@@ -1088,7 +1082,6 @@ static void open_new_blocks(cmark_parser *parser, cmark_node **container,
       *container = add_child(parser, *container, CMARK_NODE_SPOILER,
                              parser->first_nonspace + 1);
       (*container)->as.spoiler.fence_length = (matched > 255) ? 255 : matched;
-      printf("FENCE LENGTH2: %d\n", (*container)->as.spoiler.fence_length);
       (*container)->as.spoiler.fence_offset =
           (int8_t)(parser->first_nonspace - parser->offset);
       (*container)->as.spoiler.title = NULL;

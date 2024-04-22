@@ -76,34 +76,24 @@ static void test_mlem_nested_lines(test_batch_runner *runner) {
 static void test_mlem_blocks(test_batch_runner *runner) {
   static const char markdown[] = "## Header\n"
                                  "\n"
-                                 "::: spoiler spoiler_title\n"
-                                 "fenced\n"
+                                 ":::   spoiler   spoiler_title\n"
+                                 "*fenced*\n"
                                  ":::\n"
                                  "\n"
-                                 "[link](url 'title')\n";
+                                 "Bottom text\n";
 
   cmark_node *doc =
       cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
 
-  // Getters
-
   cmark_node *heading = cmark_node_first_child(doc);
-  INT_EQ(runner, cmark_node_get_heading_level(heading), 2, "mlem_get_heading_level");
-
   cmark_node *spoiler = cmark_node_next(heading);
   INT_EQ(runner, spoiler->type, CMARK_NODE_SPOILER, "mlem_spoiler");
   STR_EQ(runner, cmark_node_get_title(spoiler), "spoiler_title", "mlem_get_spoiler_title");
-  printf("START %d\n", cmark_node_get_start_line(spoiler));
-  printf("END %d\n", cmark_node_get_end_line(spoiler));
-
-  // cmark_node *paragraph = cmark_node_next(spoiler);
-
-  // printf("IS NULL: %d\n", paragraph == NULL);
-  // cmark_node *link = cmark_node_first_child(paragraph);
-  // INT_EQ(runner, cmark_node_get_start_line(paragraph), 7, "get_start_line");
-
-  // cmark_node *string = cmark_node_first_child(link);
-  // STR_EQ(runner, cmark_node_get_literal(string), "link", "get_literal string");
+  INT_EQ(runner, cmark_node_get_end_line(spoiler), 5, "mlem_spoiler_end");
+  cmark_node *spoiler_content = cmark_node_first_child(spoiler);
+  INT_EQ(runner, spoiler_content->type, CMARK_NODE_EMPH, "mlem_spoiler_content_emph");
+  cmark_node *spoiler_content_text = cmark_node_first_child(spoiler_content);
+  STR_EQ(runner, cmark_node_get_literal(spoiler_content_text), "fenced", "mlem_spoiler_content_text");
 
   cmark_node_free(doc);
 }

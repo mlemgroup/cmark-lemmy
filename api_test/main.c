@@ -13,12 +13,12 @@
 
 static const cmark_node_type node_types[] = {
     CMARK_NODE_DOCUMENT,   CMARK_NODE_BLOCK_QUOTE,     CMARK_NODE_LIST,
-    CMARK_NODE_ITEM,       CMARK_NODE_CODE_BLOCK,      CMARK_NODE_PARAGRAPH,
-    CMARK_NODE_HEADING,    CMARK_NODE_THEMATIC_BREAK,  CMARK_NODE_TEXT,
-    CMARK_NODE_SOFTBREAK,  CMARK_NODE_LINEBREAK,       CMARK_NODE_CODE,
-    CMARK_NODE_EMPH,       CMARK_NODE_STRONG,          CMARK_NODE_SUPER,
-    CMARK_NODE_SUB,        CMARK_NODE_STRIKE,          CMARK_NODE_LINK,
-    CMARK_NODE_IMAGE
+    CMARK_NODE_ITEM,       CMARK_NODE_CODE_BLOCK,      CMARK_NODE_SPOILER,
+    CMARK_NODE_PARAGRAPH,  CMARK_NODE_HEADING,         CMARK_NODE_THEMATIC_BREAK,
+    CMARK_NODE_TEXT,       CMARK_NODE_SOFTBREAK,       CMARK_NODE_LINEBREAK,
+    CMARK_NODE_CODE,       CMARK_NODE_EMPH,            CMARK_NODE_STRONG,
+    CMARK_NODE_SUPER,      CMARK_NODE_SUB,             CMARK_NODE_STRIKE,
+    CMARK_NODE_LINK,       CMARK_NODE_IMAGE
 };
 static const int num_node_types = sizeof(node_types) / sizeof(*node_types);
 
@@ -27,7 +27,7 @@ static void test_content(test_batch_runner *runner, cmark_node_type type,
 
 static void test_continuation_byte(test_batch_runner *runner, const char *utf8);
 
-static void test_mlem_additions(test_batch_runner *runner) {
+static void test_mlem_inlines(test_batch_runner *runner) {
   static const char markdown[] = "~~one~~^two^~three~\n";
 
   cmark_node *doc =
@@ -53,7 +53,7 @@ static void test_mlem_additions(test_batch_runner *runner) {
   cmark_node_free(doc);
 }
 
-static void test_mlem_nested(test_batch_runner *runner) {
+static void test_mlem_nested_lines(test_batch_runner *runner) {
   static const char markdown[] = "~~one ~two~ three~~\n";
 
   cmark_node *doc =
@@ -70,6 +70,31 @@ static void test_mlem_nested(test_batch_runner *runner) {
   INT_EQ(runner, sub_node->type, CMARK_NODE_SUB, "mlem_sub");
 
   STR_EQ(runner, cmark_node_get_literal(text), "two", "mlem_nested_sub");
+  cmark_node_free(doc);
+}
+
+static void test_mlem_blocks(test_batch_runner *runner) {
+  static const char markdown[] = "## Header\n"
+                                 "\n"
+                                 ":::   spoiler   spoiler_title\n"
+                                 "*fenced*\n"
+                                 ":::\n"
+                                 "\n"
+                                 "Bottom text\n";
+
+  cmark_node *doc =
+      cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
+
+  cmark_node *heading = cmark_node_first_child(doc);
+  cmark_node *spoiler = cmark_node_next(heading);
+  INT_EQ(runner, spoiler->type, CMARK_NODE_SPOILER, "mlem_spoiler");
+  STR_EQ(runner, cmark_node_get_title(spoiler), "spoiler_title", "mlem_get_spoiler_title");
+  INT_EQ(runner, cmark_node_get_end_line(spoiler), 5, "mlem_spoiler_end");
+  cmark_node *spoiler_content = cmark_node_first_child(spoiler);
+  INT_EQ(runner, spoiler_content->type, CMARK_NODE_EMPH, "mlem_spoiler_content_emph");
+  cmark_node *spoiler_content_text = cmark_node_first_child(spoiler_content);
+  STR_EQ(runner, cmark_node_get_literal(spoiler_content_text), "fenced", "mlem_spoiler_content_text");
+
   cmark_node_free(doc);
 }
 
@@ -416,8 +441,9 @@ void hierarchy(test_batch_runner *runner) {
   int list_item_flag = 1 << CMARK_NODE_ITEM;
   int top_level_blocks =
       (1 << CMARK_NODE_BLOCK_QUOTE) | (1 << CMARK_NODE_LIST) |
-      (1 << CMARK_NODE_CODE_BLOCK) | (1 << CMARK_NODE_PARAGRAPH) |
-      (1 << CMARK_NODE_HEADING) | (1 << CMARK_NODE_THEMATIC_BREAK);
+      (1 << CMARK_NODE_CODE_BLOCK)  | (1 << CMARK_NODE_SPOILER) | 
+      (1 << CMARK_NODE_PARAGRAPH)   | (1 << CMARK_NODE_HEADING) | 
+      (1 << CMARK_NODE_THEMATIC_BREAK);
   int all_inlines = (1 << CMARK_NODE_TEXT) | (1 << CMARK_NODE_SOFTBREAK) |
                     (1 << CMARK_NODE_LINEBREAK) | (1 << CMARK_NODE_CODE) |
                     (1 << CMARK_NODE_EMPH) | (1 << CMARK_NODE_STRONG) |
@@ -605,8 +631,9 @@ int main(void) {
   utf8(runner);
   test_cplusplus(runner);
   test_feed_across_line_ending(runner);
-  test_mlem_additions(runner);
-  test_mlem_nested(runner);
+  test_mlem_inlines(runner);
+  test_mlem_nested_lines(runner);
+  test_mlem_blocks(runner);
   test_mlem_create_tree(runner);
   sub_document(runner);
 

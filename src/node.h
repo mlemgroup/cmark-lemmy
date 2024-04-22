@@ -31,6 +31,12 @@ typedef struct {
 } cmark_code;
 
 typedef struct {
+  unsigned char *title;
+  uint8_t fence_length;
+  uint8_t fence_offset;
+} cmark_spoiler;
+
+typedef struct {
   int internal_offset;
   int8_t level;
   bool setext;
@@ -77,6 +83,7 @@ struct cmark_node {
   union {
     cmark_list list;
     cmark_code code;
+    cmark_spoiler spoiler;
     cmark_heading heading;
     cmark_link link;
     cmark_custom custom;

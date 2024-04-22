@@ -5549,6 +5549,266 @@ bufsize_t _scan_close_code_fence(const unsigned char *p) {
   }
 }
 
+// Scan an opening spoiler fence.
+bufsize_t _scan_open_spoiler_fence(const unsigned char *p) {
+  const unsigned char *marker = NULL;
+  const unsigned char *start = p;
+  int numberOfColons = 3;
+  {
+    unsigned char yych;
+    static const unsigned char yybm[] = {
+        // 14 across
+        0,   192, 192, 192, 192, 192, 192, 192, 192, 192, 0,   192, 192, 0,   // 0, '\n', '\r' marked
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 14
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 28
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 42
+        192, 192, 144, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 56
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 70
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 84
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 98
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 112
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 126
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, // 140
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192,
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192,
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192,
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192,
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192,
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192,
+        192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192,
+        192, 192, 192, 192,
+    }; // 128
+    yych = *p;
+    if (yych == ':')
+      goto myy502;
+    ++p;
+  myy501 : { return 0; }
+  myy502:
+    yych = *(marker = ++p);
+    if (yych == ':')
+      goto myy504;
+    goto myy501;
+  myy504:
+    yych = *++p;
+    if (yybm[0 + yych] & 16) {
+      goto myy100;
+    }
+  myy505:
+    p = marker;
+    goto myy501;
+  myy100:
+    yych = *++p;
+    if (yybm[0 + yych] & 16) {
+      numberOfColons++;
+      goto myy100;
+    }
+    p--;
+    goto myy101;
+  myy101:
+    yych = *++p;
+    if (yych == ' ') {
+      goto myy101;
+    }
+    if (yych != 's') {
+      goto myy505;
+    }
+    yych = *++p;
+    if (yych != 'p') {
+      goto myy505;
+    }
+    yych = *++p;
+    if (yych != 'o') {
+      goto myy505;
+    }
+    yych = *++p;
+    if (yych != 'i') {
+      goto myy505;
+    }
+    yych = *++p;
+    if (yych != 'l') {
+      goto myy505;
+    }
+    yych = *++p;
+    if (yych != 'e') {
+      goto myy505;
+    }
+    yych = *++p;
+    if (yych != 'r') {
+      goto myy505;
+    }
+    goto myy507;
+  myy507:
+    yych = *++p;
+    if (yych == ' ') {
+      goto myy507;
+    }
+    if (yych <= '\n') {
+      if (yych <= 0x00)
+        goto myy505;
+      if (yych <= '\t') {
+        marker = p;
+        goto myy509;
+      }
+      marker = p;
+      goto myy510;
+    } else {
+      if (yych == '\r') {
+        marker = p;
+        goto myy510;
+      }
+      marker = p;
+      goto myy509;
+    }
+  myy509:
+    yych = *++p;
+    if (yybm[0 + yych] & 64) {
+      goto myy509;
+    }
+    if (yych <= 0x00)
+      goto myy505;
+    if (yych >= 0x0E)
+      goto myy505;
+  myy510:
+    ++p;
+    p = marker;
+    { return (bufsize_t)(numberOfColons); }
+  }
+}
+
+// Scan a closing spoiler fence with length at least len.
+bufsize_t _scan_close_spoiler_fence(const unsigned char *p) {
+  const unsigned char *marker = NULL;
+  const unsigned char *start = p;
+
+  {
+    unsigned char yych;
+    static const unsigned char yybm[] = {
+        // 22 across
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  128, 0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, // 0, '\t' marked
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   128, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, // 22, ' ' marked
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, // 44, ':' marked
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, // 66
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, // 88
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, // 110
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,  0,   0,   0, 0, 0,
+    };
+    yych = *p;
+    if (yych == ':')
+      goto myy515;
+    ++p;
+  myy514 : { return 0; }
+  myy515:
+    yych = *(marker = ++p);
+    if (yych == ':')
+      goto myy517;
+    goto myy514;
+  myy517:
+    yych = *++p;
+    if (yybm[0 + yych] & 32) {
+      goto myy520;
+    }
+  myy518:
+    p = marker;
+    goto myy514;
+  myy519:
+    yych = *++p;
+    goto myy518;
+  myy520:
+    yych = *++p;
+    if (yybm[0 + yych] & 32) {
+      goto myy520;
+    }
+    if (yych <= '\f') {
+      if (yych <= 0x08)
+        goto myy518;
+      if (yych <= '\t') {
+        marker = p;
+        goto myy522;
+      }
+      if (yych <= '\n') {
+        marker = p;
+        goto myy523;
+      }
+      goto myy518;
+    } else {
+      if (yych <= '\r') {
+        marker = p;
+        goto myy523;
+      }
+      if (yych == ' ') {
+        marker = p;
+        goto myy522;
+      }
+      goto myy518;
+    }
+  myy521:
+    yych = *++p;
+    if (yych <= '\f') {
+      if (yych <= 0x08)
+        goto myy518;
+      if (yych <= '\t') {
+        marker = p;
+        goto myy524;
+      }
+      if (yych <= '\n') {
+        marker = p;
+        goto myy525;
+      }
+      goto myy518;
+    } else {
+      if (yych <= '\r') {
+        marker = p;
+        goto myy525;
+      }
+      if (yych == ' ') {
+        marker = p;
+        goto myy524;
+      }
+      goto myy518;
+    }
+  myy522:
+    yych = *++p;
+    if (yybm[0 + yych] & 128) {
+      goto myy522;
+    }
+    if (yych <= 0x08)
+      goto myy518;
+    if (yych <= '\n')
+      goto myy523;
+    if (yych != '\r')
+      goto myy518;
+  myy523:
+    ++p;
+    p = marker;
+    { return (bufsize_t)(p - start); }
+  myy524:
+    yych = *++p;
+    if (yych <= '\f') {
+      if (yych <= 0x08)
+        goto myy518;
+      if (yych <= '\t')
+        goto myy524;
+      if (yych >= '\v')
+        goto myy518;
+    } else {
+      if (yych <= '\r')
+        goto myy525;
+      if (yych == ' ')
+        goto myy524;
+      goto myy518;
+    }
+  myy525:
+    ++p;
+    p = marker;
+    { return (bufsize_t)(p - start); }
+  }
+}
+
 // Returns positive value if a URL begins in a way that is potentially
 // dangerous, with javascript:, vbscript:, file:, or data:, otherwise 0.
 bufsize_t _scan_dangerous_url(const unsigned char *p) {

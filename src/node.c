@@ -53,6 +53,7 @@ static bool S_can_contain(cmark_node *node, cmark_node *child) {
     return child->type == CMARK_NODE_ITEM;
 
   case CMARK_NODE_CUSTOM_BLOCK:
+  case CMARK_NODE_SPOILER:
     return true;
 
   case CMARK_NODE_PARAGRAPH:
@@ -114,6 +115,9 @@ static void S_free_nodes(cmark_node *e) {
       mem->free(e->data);
       mem->free(e->as.code.info);
       break;
+    case CMARK_NODE_SPOILER:
+      mem->free(e->data);
+      mem->free(e->as.spoiler.title);
     case CMARK_NODE_TEXT:
     case CMARK_NODE_CODE:
       mem->free(e->data);
@@ -174,6 +178,8 @@ const char *cmark_node_get_type_string(cmark_node *node) {
     return "item";
   case CMARK_NODE_CODE_BLOCK:
     return "code_block";
+  case CMARK_NODE_SPOILER:
+    return "spoiler";
   case CMARK_NODE_CUSTOM_BLOCK:
     return "custom_block";
   case CMARK_NODE_PARAGRAPH:
@@ -532,6 +538,8 @@ const char *cmark_node_get_title(cmark_node *node) {
   case CMARK_NODE_LINK:
   case CMARK_NODE_IMAGE:
     return node->as.link.title ? (char *)node->as.link.title : "";
+  case CMARK_NODE_SPOILER:
+    return node->as.spoiler.title ? (char *)node->as.spoiler.title : "";
   default:
     break;
   }

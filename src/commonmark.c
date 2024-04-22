@@ -294,6 +294,16 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     BLANKLINE();
     break;
 
+  case CMARK_NODE_SPOILER:
+    // This isn't implemented yet! We'll need to implement this if we ever want node tree -> markdown conversion
+    if (entering) {
+      LIT("::: spoiler");
+    } else {
+      LIT(":::");
+    }
+    BLANKLINE();
+    break;
+
   case CMARK_NODE_CUSTOM_BLOCK:
     BLANKLINE();
     OUT(entering ? cmark_node_get_on_enter(node) : cmark_node_get_on_exit(node),

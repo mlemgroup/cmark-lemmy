@@ -441,8 +441,9 @@ void hierarchy(test_batch_runner *runner) {
   int list_item_flag = 1 << CMARK_NODE_ITEM;
   int top_level_blocks =
       (1 << CMARK_NODE_BLOCK_QUOTE) | (1 << CMARK_NODE_LIST) |
-      (1 << CMARK_NODE_CODE_BLOCK) | (1 << CMARK_NODE_PARAGRAPH) |
-      (1 << CMARK_NODE_HEADING) | (1 << CMARK_NODE_THEMATIC_BREAK);
+      (1 << CMARK_NODE_CODE_BLOCK)  | (1 << CMARK_NODE_SPOILER) | 
+      (1 << CMARK_NODE_PARAGRAPH)   | (1 << CMARK_NODE_HEADING) | 
+      (1 << CMARK_NODE_THEMATIC_BREAK);
   int all_inlines = (1 << CMARK_NODE_TEXT) | (1 << CMARK_NODE_SOFTBREAK) |
                     (1 << CMARK_NODE_LINEBREAK) | (1 << CMARK_NODE_CODE) |
                     (1 << CMARK_NODE_EMPH) | (1 << CMARK_NODE_STRONG) |
@@ -617,26 +618,26 @@ int main(void) {
   int retval;
   test_batch_runner *runner = test_batch_runner_new();
 
-  // version(runner);
-  // accessors(runner);
-  // free_parent(runner);
-  // node_check(runner);
-  // iterator(runner);
-  // iterator_delete(runner);
-  // create_tree(runner);
-  // custom_nodes(runner);
-  // hierarchy(runner);
-  // render_commonmark(runner);
-  // utf8(runner);
-  // test_cplusplus(runner);
-  // test_feed_across_line_ending(runner);
-  // test_mlem_inlines(runner);
-  // test_mlem_nested_lines(runner);
+  version(runner);
+  accessors(runner);
+  free_parent(runner);
+  node_check(runner);
+  iterator(runner);
+  iterator_delete(runner);
+  create_tree(runner);
+  custom_nodes(runner);
+  hierarchy(runner);
+  render_commonmark(runner);
+  utf8(runner);
+  test_cplusplus(runner);
+  test_feed_across_line_ending(runner);
+  test_mlem_inlines(runner);
+  test_mlem_nested_lines(runner);
   test_mlem_blocks(runner);
-  // test_mlem_create_tree(runner);
-  // sub_document(runner);
+  test_mlem_create_tree(runner);
+  sub_document(runner);
 
-  // test_print_summary(runner);
+  test_print_summary(runner);
   retval = test_ok(runner) ? 0 : 1;
   free(runner);
 

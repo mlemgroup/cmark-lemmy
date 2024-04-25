@@ -76,12 +76,10 @@ static void test_mlem_nested_lines(test_batch_runner *runner) {
 static void test_mlem_blocks(test_batch_runner *runner) {
   static const char markdown[] = "## Header\n"
                                  "\n"
-                                 ":::   spoiler   spoiler_title\n"
-                                 "*fenced*\n"
-                                 ":::\n"
-                                 "\n"
-                                 "Bottom text\n";
-
+                                 ":::::   spoiler   spoiler_title\n"
+                                 "> Test\n"
+                                 ":::::\n"
+                                 "below\n";
   cmark_node *doc =
       cmark_parse_document(markdown, sizeof(markdown) - 1, CMARK_OPT_DEFAULT);
 
@@ -90,10 +88,18 @@ static void test_mlem_blocks(test_batch_runner *runner) {
   INT_EQ(runner, spoiler->type, CMARK_NODE_SPOILER, "mlem_spoiler");
   STR_EQ(runner, cmark_node_get_title(spoiler), "spoiler_title", "mlem_get_spoiler_title");
   INT_EQ(runner, cmark_node_get_end_line(spoiler), 5, "mlem_spoiler_end");
+
   cmark_node *spoiler_content = cmark_node_first_child(spoiler);
-  INT_EQ(runner, spoiler_content->type, CMARK_NODE_EMPH, "mlem_spoiler_content_emph");
-  cmark_node *spoiler_content_text = cmark_node_first_child(spoiler_content);
-  STR_EQ(runner, cmark_node_get_literal(spoiler_content_text), "fenced", "mlem_spoiler_content_text");
+  INT_EQ(runner, spoiler_content->type, CMARK_NODE_BLOCK_QUOTE, "mlem_spoiler_content");
+  cmark_node *paragraph = cmark_node_first_child(spoiler_content);
+  cmark_node *paragraph_content = cmark_node_first_child(paragraph);
+  STR_EQ(runner, cmark_node_get_literal(paragraph_content), "Test", "mlem_spoiler_content_text");
+
+  cmark_node *below = cmark_node_next(spoiler);
+  INT_EQ(runner, below->type, CMARK_NODE_PARAGRAPH, "mlem_spoiler_below");
+  cmark_node *below_content = cmark_node_first_child(below);
+  INT_EQ(runner, below_content->type, CMARK_NODE_TEXT, "mlem_spoiler_below_text");
+  STR_EQ(runner, cmark_node_get_literal(below_content), "below", "mlem_spoiler_content_text2");
 
   cmark_node_free(doc);
 }

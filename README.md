@@ -1,6 +1,9 @@
 cmark-lemmy
 =============
 
+> [!note]
+> This project has been replaced with [LemmyMarkdownUI](https://github.com/mlemgroup/LemmyMarkdownUI). The cmark code is contained within the `Sources/cmark-lemmy` folder of that repository. The cmark code used in LemmyMarkdownUI is based on [cmark-gfm](https://github.com/github/cmark-gfm), whereas the code in this repo was based on just [cmark](https://github.com/commonmark/cmark). Basing the code on cmark-gfm ended up being a better option because it contains support for some Lemmy-flavored features (e.g. tables) already.
+
 A modified version of [cmark](https://github.com/commonmark/cmark) for parsing [Lemmy-flavored markdown](https://join-lemmy.org/docs/users/02-media.html#text). The rest of this README remains unchanged.
 
 cmark
